@@ -3,8 +3,9 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowUpCircle, Bot, Code, FileText, BarChart, CircleDot } from "lucide-react";
+import { ArrowUpCircle, Bot, Code, FileText, BarChart, CircleDot, MessageSquare, Cloud } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/components/ui/use-toast";
 import { ChatMessage } from "@/types";
 
 interface ChatInterfaceProps {
@@ -16,13 +17,15 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
     {
       id: "1",
       sender: "bot",
-      content: "Hello! I'm CloudWise AI, your DevOps assistant. How can I help you optimize your cloud infrastructure today?",
+      content: "Hello! I'm CloudWise AI, your intelligent assistant. I can help with both general questions and DevOps tasks. How can I assist you today?",
       timestamp: new Date().toISOString(),
     },
   ]);
   
   const [input, setInput] = useState("");
+  const [mode, setMode] = useState<"general" | "devops">("general");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
   
   const handleSendMessage = () => {
     if (!input.trim()) return;
@@ -37,27 +40,29 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     
-    // Simulate bot response with a recommendation
+    // Simulate bot response based on mode
     setTimeout(() => {
       const botResponse: ChatMessage = {
         id: `bot-${Date.now()}`,
         sender: "bot",
-        content: "I've analyzed your AWS EC2 instances and detected potential cost savings. You have several underutilized instances that could be downsized or switched to Spot instances.",
+        content: mode === "devops" 
+          ? "I've analyzed your infrastructure and found potential optimizations. Would you like to see the detailed recommendations?"
+          : "I understand you have a question. Let me help you with that. What specific information are you looking for?",
         timestamp: new Date().toISOString(),
-        attachments: [
+        attachments: mode === "devops" ? [
           {
             type: "recommendation",
             data: {
-              title: "EC2 Optimization",
-              description: "Based on the last 30 days of usage patterns, you could save $432/month by resizing these instances:",
+              title: "Infrastructure Optimization",
+              description: "Here are some potential improvements identified:",
               items: [
-                "i-0a73b82f1c5de3a7b: m5.xlarge → m5.large (50% cheaper)",
-                "i-0b94c7d8e5f6a7b8c: c5.2xlarge → c5.xlarge (50% cheaper)"
+                "Resource utilization optimization recommended",
+                "Cost savings opportunity detected"
               ],
               savings: 432,
             }
           }
-        ]
+        ] : undefined
       };
       
       setMessages((prev) => [...prev, botResponse]);
@@ -77,12 +82,42 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
     }
   };
 
+  const switchMode = (newMode: "general" | "devops") => {
+    setMode(newMode);
+    toast({
+      title: `Switched to ${newMode === "devops" ? "DevOps" : "General"} Mode`,
+      description: newMode === "devops" 
+        ? "Now focusing on infrastructure and cloud operations."
+        : "Now available for general assistance.",
+    });
+  };
+
   return (
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
           <span>CloudWise AI Assistant</span>
+          <div className="flex gap-2 ml-auto">
+            <Button
+              variant={mode === "general" ? "default" : "outline"}
+              size="sm"
+              onClick={() => switchMode("general")}
+              className="text-xs"
+            >
+              <MessageSquare className="h-4 w-4 mr-1" />
+              General Chat
+            </Button>
+            <Button
+              variant={mode === "devops" ? "default" : "outline"}
+              size="sm"
+              onClick={() => switchMode("devops")}
+              className="text-xs"
+            >
+              <Cloud className="h-4 w-4 mr-1" />
+              DevOps Mode
+            </Button>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
@@ -120,15 +155,11 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
                                 <li key={idx}>{item}</li>
                               ))}
                             </ul>
-                            <div className="text-green-500 text-sm font-medium">
-                              Potential monthly savings: ${data.savings}
-                            </div>
-                          </div>
-                        );
-                      } else if (attachment.type === "terraform") {
-                        return (
-                          <div key={i} className="mt-3 border rounded-md p-3 bg-slate-900 text-slate-50">
-                            <pre className="text-xs overflow-auto">{attachment.data.code}</pre>
+                            {data.savings && (
+                              <div className="text-green-500 text-sm font-medium">
+                                Potential monthly savings: ${data.savings}
+                              </div>
+                            )}
                           </div>
                         );
                       }
@@ -147,7 +178,10 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask about your cloud infrastructure..."
+                  placeholder={mode === "devops" 
+                    ? "Ask about your cloud infrastructure..."
+                    : "Ask me anything..."
+                  }
                   className="pr-10"
                 />
                 <div className="absolute right-1 top-1 opacity-70">
@@ -164,20 +198,22 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
               </div>
             </div>
             
-            <div className="flex gap-2 mt-2">
-              <Button variant="outline" size="sm" className="text-xs">
-                <Code className="h-3 w-3 mr-1" />
-                Generate Terraform
-              </Button>
-              <Button variant="outline" size="sm" className="text-xs">
-                <BarChart className="h-3 w-3 mr-1" />
-                Analyze costs
-              </Button>
-              <Button variant="outline" size="sm" className="text-xs">
-                <FileText className="h-3 w-3 mr-1" />
-                Explain logs
-              </Button>
-            </div>
+            {mode === "devops" && (
+              <div className="flex gap-2 mt-2">
+                <Button variant="outline" size="sm" className="text-xs">
+                  <Code className="h-3 w-3 mr-1" />
+                  Generate Terraform
+                </Button>
+                <Button variant="outline" size="sm" className="text-xs">
+                  <BarChart className="h-3 w-3 mr-1" />
+                  Analyze costs
+                </Button>
+                <Button variant="outline" size="sm" className="text-xs">
+                  <FileText className="h-3 w-3 mr-1" />
+                  Explain logs
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
