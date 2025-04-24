@@ -1,4 +1,3 @@
-
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +6,8 @@ import { ArrowUpCircle, Bot, Code, FileText, BarChart, CircleDot, MessageSquare,
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { ChatMessage } from "@/types";
+import { getAIResponse } from "@/utils/openai";
+import { ApiKeyInput } from "./ApiKeyInput";
 
 interface ChatInterfaceProps {
   className?: string;
@@ -27,8 +28,18 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!input.trim()) return;
+    
+    const apiKey = localStorage.getItem("openai_key");
+    if (!apiKey) {
+      toast({
+        title: "API Key Required",
+        description: "Please enter your OpenAI API key to use the chatbot.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -39,30 +50,18 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
     
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
-    
-    // Simulate bot response based on mode
-    setTimeout(() => {
+
+    try {
+      const aiResponse = await getAIResponse(
+        [...messages, userMessage],
+        mode
+      );
+
       const botResponse: ChatMessage = {
         id: `bot-${Date.now()}`,
         sender: "bot",
-        content: mode === "devops" 
-          ? "I've analyzed your infrastructure and found potential optimizations. Would you like to see the detailed recommendations?"
-          : "I understand you have a question. Let me help you with that. What specific information are you looking for?",
+        content: aiResponse,
         timestamp: new Date().toISOString(),
-        attachments: mode === "devops" ? [
-          {
-            type: "recommendation",
-            data: {
-              title: "Infrastructure Optimization",
-              description: "Here are some potential improvements identified:",
-              items: [
-                "Resource utilization optimization recommended",
-                "Cost savings opportunity detected"
-              ],
-              savings: 432,
-            }
-          }
-        ] : undefined
       };
       
       setMessages((prev) => [...prev, botResponse]);
@@ -72,7 +71,13 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
         const scrollContainer = scrollAreaRef.current;
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
-    }, 1000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to get AI response. Please check your API key and try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -122,6 +127,7 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
       </CardHeader>
       <CardContent className="p-0">
         <div className="flex flex-col h-[500px]">
+          <ApiKeyInput />
           <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
             <div className="space-y-4">
               {messages.map((message) => (
