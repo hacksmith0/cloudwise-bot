@@ -7,23 +7,25 @@ const SYSTEM_PROMPTS = {
 };
 
 export async function getAIResponse(messages: ChatMessage[], mode: "general" | "devops") {
+  const huggingFaceApiKey = localStorage.getItem("huggingface_key");
+  
+  if (!huggingFaceApiKey) {
+    throw new Error("Hugging Face API key is required");
+  }
+
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api-inference.huggingface.co/models/gpt2", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("openai_key")}`,
+        "Authorization": `Bearer ${huggingFaceApiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPTS[mode] },
-          ...messages.map(msg => ({
-            role: msg.sender === "user" ? "user" : "assistant",
-            content: msg.content
-          }))
-        ],
-        temperature: mode === "devops" ? 0.3 : 0.7, // Lower temperature for more precise technical responses
+        inputs: SYSTEM_PROMPTS[mode] + " " + messages.map(msg => msg.content).join(" "),
+        parameters: {
+          max_new_tokens: 250,
+          temperature: mode === "devops" ? 0.3 : 0.7,
+        }
       }),
     });
 
@@ -32,7 +34,7 @@ export async function getAIResponse(messages: ChatMessage[], mode: "general" | "
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    return data[0].generated_text;
   } catch (error) {
     console.error("Error getting AI response:", error);
     throw error;
