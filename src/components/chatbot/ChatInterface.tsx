@@ -7,7 +7,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { ChatMessage } from "@/types";
 import { getAIResponse } from "@/utils/openai";
-import { ApiKeyInput } from "./ApiKeyInput";
 
 interface ChatInterfaceProps {
   className?: string;
@@ -30,16 +29,6 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
   
   const handleSendMessage = async () => {
     if (!input.trim()) return;
-    
-    const apiKey = localStorage.getItem("openai_key");
-    if (!apiKey) {
-      toast({
-        title: "API Key Required",
-        description: "Please enter your OpenAI API key to use the chatbot.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -74,7 +63,7 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to get AI response. Please check your API key and try again.",
+        description: "Failed to get AI response. Please try again.",
         variant: "destructive",
       });
     }
@@ -127,7 +116,6 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
       </CardHeader>
       <CardContent className="p-0">
         <div className="flex flex-col h-[500px]">
-          <ApiKeyInput />
           <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
             <div className="space-y-4">
               {messages.map((message) => (

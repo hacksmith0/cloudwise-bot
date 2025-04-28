@@ -7,18 +7,11 @@ const SYSTEM_PROMPTS = {
 };
 
 export async function getAIResponse(messages: ChatMessage[], mode: "general" | "devops") {
-  const huggingFaceApiKey = localStorage.getItem("huggingface_key");
-  
-  if (!huggingFaceApiKey) {
-    throw new Error("Hugging Face API key is required");
-  }
-
   try {
     const response = await fetch("https://api-inference.huggingface.co/models/gpt2", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${huggingFaceApiKey}`,
       },
       body: JSON.stringify({
         inputs: SYSTEM_PROMPTS[mode] + " " + messages.map(msg => msg.content).join(" "),
